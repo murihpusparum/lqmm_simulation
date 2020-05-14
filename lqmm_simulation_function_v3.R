@@ -10,6 +10,7 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   ranef1 <- list()
   ranef2 <- list()
   uij <- list()
+  eij <- list()
   
   catch_lqmm <- function(theta, cov_name){
     out <- tryCatch(covHandling(theta = theta, n = 1, cov_name = cov_name, quad_type = "normal"), 
@@ -30,12 +31,12 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
     
     fit1 <- lqmm(fixed = Measure ~ 1, random = ~ 1, group = Subject, tau = tau1,
                  nK = 11, type = "normal", data = data$d, 
-                 control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 100, UP_tol = 1e-5,
+                 control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 1000, UP_tol = 1e-7,
                                        beta = 0.5, gamma = 1))
     
     fit2 <- lqmm(fixed = Measure ~ 1, random = ~ 1, group = Subject, tau = tau2,
                  nK = 11, type = "normal", data = data$d, 
-                 control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 100, UP_tol = 1e-5,
+                 control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 1000, UP_tol = 1e-7,
                                        beta = 0.5, gamma = 1))
     
     warn_out1[i] <- catch_lqmm(theta = fit1$theta_z, cov_name = fit1$cov_name)
@@ -49,16 +50,16 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
     
     j <- 1
     while (warn1[j] == TRUE | warn2[j] == TRUE) {
-#      rm(.Random.seed)
+   #   rm(.Random.seed)
       data <- FUN(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2)
       
       fit1 <- lqmm(fixed = Measure ~ 1, random = ~ 1, group = Subject, tau = tau1,
                    nK = 11, type = "normal", data = data$d, 
-                   control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 100, UP_tol = 1e-5,
+                   control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 1000, UP_tol = 1e-7,
                                          beta = 0.5, gamma = 1))
       fit2 <- lqmm(fixed = Measure ~ 1, random = ~ 1, group = Subject, tau = tau2,
                    nK = 11, type = "normal", data = data$d, 
-                   control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 100, UP_tol = 1e-5,
+                   control = lqmmControl(LP_max_iter = 1000, LP_tol_ll = 1e-7, UP_max_iter = 1000, UP_tol = 1e-7,
                                          beta = 0.5, gamma = 1))
       
       j <- j+1
@@ -82,6 +83,12 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
     u_ij = data.frame(u_ij)
     uij <- append(uij, u_ij)
     uij <- data.frame(uij)
+    
+    #store simulated error
+    e_ij <- data$e
+    e_ij = data.frame(e_ij)
+    eij <- append(eij, e_ij)
+    eij <- data.frame(eij)
     
     #random effect caclulation
     ranef_lqmm1 = data.frame(ranef(fit1))
@@ -121,10 +128,12 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
     ranef1 = ranef1[, -rem]
     ranef2 = ranef2[, -rem]
     uij    = uij[, -rem]
+    eij    = eij[, -rem]
   } else {
     ranef1 = ranef1
     ranef2 = ranef2
     uij    = uij
+    eij    = eij
   }
   
   len_ran1 <- ncol(ranef1)
@@ -206,7 +215,7 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   return(list(MSE_tau_0.025 = lower_MSE, MSE_tau_0.975 = upper_MSE, rel_width = WR, 
               relbias_beta0_tau0.025 = lower_relbias_beta0, relbias_beta0_tau0.975 = upper_relbias_beta0, 
               w1=warn_out1, w1a=warn1a, w2=warn_out2, w2a=warn2a, est = est,
-              B1 = B1))
+              B1 = B1, uij = uij, eij = eij))
   
 }
 
@@ -228,7 +237,7 @@ sim_t <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2){
   sdi = sqrt(var_ui)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #1a for both e_ij and u_i follow t - scaled
@@ -250,9 +259,9 @@ sim_t_sc <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2
   Measure = alpha_0 + e_ij + u_i                   
   
   true_width <- qt(tau2, df=df) - qt(tau1, df=df)
- 
+  
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #2 for both e_ij and u_i follow N
@@ -272,7 +281,7 @@ sim_N <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2){
   true_width <- qnorm(tau2, mean=meanx, sd=sd) - qnorm(tau1, mean=meanx, sd=sd)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #3 for e_ij follow N and u_i follow t
@@ -293,7 +302,7 @@ sim_N_t <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2)
   true_width <- qnorm(tau2, mean=meanx, sd=sd) - qnorm(tau1, mean=meanx, sd=sd)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #4 for e_ij follow t and u_i follow N
@@ -314,7 +323,7 @@ sim_t_N <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2)
   true_width <- qt(tau2, df=df) - qt(tau1, df=df)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #5 for both e_ij and u_i follow Chisq
@@ -336,7 +345,7 @@ sim_chi <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2)
   sdi = sqrt(var_ui)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #5a for both e_ij and u_i follow Chisq
@@ -358,7 +367,7 @@ sim_chi_sc <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, ta
   sdi = sqrt(var_ui)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #6 for e_ij follow N and u_i follow Chisq
@@ -379,7 +388,7 @@ sim_N_chi <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau
   sdi = sqrt(var_ui)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #7 for e_ij follow Chisq and u_i follow N
@@ -397,7 +406,7 @@ sim_chi_N <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau
   true_width <- qchisq(tau2, df=df) - qchisq(tau1, df=df)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #8 for both e_ij and u_i follow Lognormal(0, 1)
@@ -418,7 +427,7 @@ sim_lnorm <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau
   sdi = sqrt(var_ui)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi))
 }
 
 #8a for both e_ij and u_i follow Lognormal(0, 1) - scaled
@@ -443,7 +452,7 @@ sim_lnorm_sc <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, 
   true_width <- qlnorm(tau2, mean=meanx, sd=sd) - qlnorm(tau1, mean=meanx, sd=sd)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi_sc))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi_sc))
 }
 
 #9 for e_ij follow N and u_i follow Lognormal
@@ -464,7 +473,7 @@ sim_N_lnorm <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   true_width <- qnorm(tau2, mean=meanx, sd=sd) - qnorm(tau1, mean=meanx, sd=sd)
   
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi_sc))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi_sc))
 }
 
 #10 for e_ij follow Lognormal and u_i follow t
@@ -489,7 +498,7 @@ sim_lnorm_t <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   
  
   data_model_1 = data.frame(Subject, u_i, e_ij, Replicates, Measure, beta_01, beta_02, true_width)
-  return(list(d=data_model_1, u=u_ij, s=sdi_sc))
+  return(list(d=data_model_1, u=u_ij, e=e_ij, s=sdi_sc))
 }
 
 library(lqmm)
