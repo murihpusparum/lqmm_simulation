@@ -49,7 +49,7 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
     
     j <- 1
     while (warn1[j] == TRUE | warn2[j] == TRUE) {
-      rm(.Random.seed)
+#      rm(.Random.seed)
       data <- FUN(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, tau2)
       
       fit1 <- lqmm(fixed = Measure ~ 1, random = ~ 1, group = Subject, tau = tau1,
@@ -96,43 +96,70 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
     ranef2 <- append(ranef2, ranef_lqmm2)
   }
   
-  colnames(estimates1) <- c("beta0", "b0", "var_b0")
-  colnames(estimates2) <- c("beta0", "b0", "var_b0")
+  colnames(estimates1) <- c("beta01", "b01", "var_b01")
+  colnames(estimates2) <- c("beta02", "b02", "var_b02")
   
   ranef1 <- data.frame(ranef1)
-  ranef1 <- ranef1[, order(names(ranef1))]
-  
   ranef2 <- data.frame(ranef2)
-  ranef2 <- ranef2[, order(names(ranef2))]
+  
+  #modify data with outliers
+  estimates <- cbind.data.frame(estimates1, estimates2)
+  estimates$z1 <- (estimates$beta01 - mean(estimates$beta01))/sd(estimates$beta01)
+  estimates$z2 <- (estimates$beta02 - mean(estimates$beta02))/sd(estimates$beta02)
+  est <- estimates[estimates$z1 >= -2 & estimates$z1 <= 2 & estimates$z2 >= -2 & estimates$z2 <= 2, ]
+  len_est <- length(est$beta01)
+  
+  rem <- NULL
+  for (i in 1:B) {
+    if (estimates$z1[i] >= -2 & estimates$z1[i] <= 2 & estimates$z2[i] >= -2 & estimates$z2[i] <= 2){
+      rem[i] = NA
+    }
+    else {rem[i] = i}
+  }
+  rem <- as.numeric(na.omit(rem))
+  if(length(rem != 0)){
+    ranef1 = ranef1[, -rem]
+    ranef2 = ranef2[, -rem]
+    uij    = uij[, -rem]
+  } else {
+    ranef1 = ranef1
+    ranef2 = ranef2
+    uij    = uij
+  }
+  
+  len_ran1 <- ncol(ranef1)
+  len_ran2 <- ncol(ranef2)
   
   #calculate ci estimate for each subject
-  beta_new1 <- data.frame(matrix(0, ncol= B, nrow = N))
-  lower <- data.frame(matrix(0, ncol= B, nrow = N))
-  beta_new2 <- data.frame(matrix(0, ncol= B, nrow = N))
-  upper <- data.frame(matrix(0, ncol= B, nrow = N))
-  width_ci <- data.frame(matrix(0, ncol= B, nrow = N))
+  B1 <- length(est$beta01)
+  beta_new1 <- data.frame(matrix(0, ncol= B1, nrow = N))
+  lower <- data.frame(matrix(0, ncol= B1, nrow = N))
+  beta_new2 <- data.frame(matrix(0, ncol= B1, nrow = N))
+  upper <- data.frame(matrix(0, ncol= B1, nrow = N))
+  width_ci <- data.frame(matrix(0, ncol= B1, nrow = N))
   
-  for (j in 1:B) {
-    beta_new1[,j] = rep(estimates1$beta0[j], N)
+  
+  for (j in 1:B1) {
+    beta_new1[,j] = rep(est$beta01[j], N)
     lower[,j] = beta_new1[,j] + ranef1[, j]
-    beta_new2[,j] = rep(estimates2$beta0[j], N)
+    beta_new2[,j] = rep(est$beta02[j], N)
     upper[,j] = beta_new2[,j] + ranef2[, j]
     width_ci[, j] <- upper[, j] - lower[, j]
   }
   
-  colnames(beta_new1) <- paste("beta0_hat", 1:B, sep="")
-  colnames(lower) <- paste("low", 1:B, sep="")
+  colnames(beta_new1) <- paste("beta0_hat", 1:B1, sep="")
+  colnames(lower) <- paste("low", 1:B1, sep="")
   
-  colnames(beta_new2) <- paste("beta0_hat", 1:B, sep="")
-  colnames(upper) <- paste("up", 1:B, sep="")
+  colnames(beta_new2) <- paste("beta0_hat", 1:B1, sep="")
+  colnames(upper) <- paste("up", 1:B1, sep="")
   
-  colnames(width_ci) <- paste("width_ci", 1:B, sep="")
+  colnames(width_ci) <- paste("width_ci", 1:B1, sep="")
   
   all_width_ci <- data.frame(width_ci)
   
   WR_j <- NULL
   for (i in 1:N) {
-    WR_j[i] = (sum(all_width_ci[i, ]) / B) / data$d$true_width[1]
+    WR_j[i] = (sum(all_width_ci[i, ]) / B1) / data$d$true_width[1]
   }
   WR <- mean(WR_j)
   
@@ -145,14 +172,14 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   
   rel_bias_beta01 <- NULL
   rel_bias_beta02 <- NULL
-  for (j in 1:B) {
-    bias_beta_01[j] = (data$d$beta_01[1] - estimates1$beta0[j])^2
-    bias_b01[j] = (data$s - estimates1$b0[j])^2 #sdi - hat(sdi)
-    bias_beta_02[j] = (data$d$beta_02[1] - estimates2$beta0[j])^2
-    bias_b02[j] = (data$s - estimates2$b0[j])^2
+  for (j in 1:B1) {
+    bias_beta_01[j] = (data$d$beta_01[1] - est$beta01[j])^2
+    bias_b01[j] = (data$s - est$b01[j])^2 #sdi - hat(sdi)
+    bias_beta_02[j] = (data$d$beta_02[1] - est$beta02[j])^2
+    bias_b02[j] = (data$s - est$b02[j])^2
     
-    rel_bias_beta01[j] = (estimates1$beta0[j] - data$d$beta_01[1]) / abs(data$d$beta_01[1])
-    rel_bias_beta02[j] = (estimates2$beta0[j] - data$d$beta_02[1]) / abs(data$d$beta_02[1])
+    rel_bias_beta01[j] = (est$beta01[j] - data$d$beta_01[1]) / abs(data$d$beta_01[1])
+    rel_bias_beta02[j] = (est$beta02[j] - data$d$beta_02[1]) / abs(data$d$beta_02[1])
   }
   lower_MSE_beta0 = mean(bias_beta_01)
   lower_MSE_b0 = mean(bias_b01)
@@ -164,13 +191,13 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   
   
   #calculate MSE/mean of MSE for all ui estimate
-  u_i_sumsq <- data.frame(matrix(0, ncol = B, nrow =  N))
+  u_i_sumsq <- data.frame(matrix(0, ncol = B1, nrow =  N))
   MSE_ui <- NULL
   for (k in 1:N) {
-    for (j in 1:B) {
+    for (j in 1:B1) {
       u_i_sumsq[,j] = (uij[, j] - ranef1[, j])^2 #(uij - ui_hat)^2
     }
-    MSE_ui[k] =sum(u_i_sumsq[k,])/B
+    MSE_ui[k] =sum(u_i_sumsq[k,])/B1
   }
   mean_MSE_ui <- mean(MSE_ui)
   
@@ -178,7 +205,9 @@ lqmm_cal <- function(B, N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   upper_MSE <- list(beta0 = upper_MSE_beta0, b0 = upper_MSE_b0)
   return(list(MSE_tau_0.025 = lower_MSE, MSE_tau_0.975 = upper_MSE, rel_width = WR, 
               relbias_beta0_tau0.025 = lower_relbias_beta0, relbias_beta0_tau0.975 = upper_relbias_beta0, 
-              w1=warn_out1, w1a=warn1a, w2=warn_out2, w2a=warn2a, est1 = estimates1, est2 = estimates2))
+              w1=warn_out1, w1a=warn1a, w2=warn_out2, w2a=warn2a, est = est,
+              B1 = B1))
+  
 }
 
 
@@ -463,17 +492,27 @@ sim_lnorm_t <- function(N, ni, alpha_0, meanx, meanij, sd, sdi, df, dfi, tau1, t
   return(list(d=data_model_1, u=u_ij, s=sdi_sc))
 }
 
+library(lqmm)
+inp <- read.csv("sim_input.csv", sep=";", header=T)
+inp$B[11] <- 100
 
-
-ss <- lqmm_cal(B=inp$B[1], N=inp$N[1], ni=inp$ni[1], alpha_0=inp$alpha_0[1], meanx=inp$meanx[1], meanij=inp$meanij[1], 
-               sd=inp$sd[1], sdi=inp$sdi[1], df=inp$df[1], dfi=inp$dfi[1], tau1=inp$tau1[1], tau2=inp$tau2[1], FUN = sim_lnorm)
+ss <- lqmm_cal(B=inp$B[11], N=inp$N[11], ni=inp$ni[11], alpha_0=inp$alpha_0[11], meanx=inp$meanx[11], meanij=inp$meanij[11], 
+               sd=inp$sd[11], sdi=inp$sdi[11], df=inp$df[11], dfi=inp$dfi[11], tau1=inp$tau1[11], tau2=inp$tau2[11], FUN = sim_chi_sc)
 ss
 ss$est1$beta0
 
+ss <- lqmm_cal(B=inp$B[1], N=inp$N[1], ni=inp$ni[1], alpha_0=inp$alpha_0[1], meanx=inp$meanx[1], meanij=inp$meanij[1], 
+               sd=inp$sd[1], sdi=inp$sdi[1], df=inp$df[1], dfi=inp$dfi[1], tau1=inp$tau1[1], tau2=inp$tau2[1], FUN = sim_lnorm_sc)
+ss
 
+(1.8 - mean(ss$estimates$beta01))/sd(ss$estimates$beta01)
+qnorm(0.025, 0, 1)
 r1 <- sim_chi(N=inp$N[11], ni=inp$ni[11], alpha_0=inp$alpha_0[11], meanx=inp$meanx[11], meanij=inp$meanij[11], 
               sd=inp$sd[11], sdi=inp$sdi[11],
               df=inp$df[11], dfi=inp$dfi[11], tau1=inp$tau1[11], tau2=inp$tau2[11])
 r1$s
 
-?.Random.seed
+return(list(est = est, estimates = estimates, rem = rem, ranef1 = ranef1, ranef2 = ranef2,
+            len = len_est, len_ran1 = len_ran1, len_ran2 = len_ran1))
+
+}
