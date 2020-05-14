@@ -244,16 +244,16 @@ for (i in 1:2) {
   B1[i+18]  = r10$B1
   relbias_beta0_tau0.025[i+18] = r10$relbias_beta0_tau0.025
   relbias_beta0_tau0.975[i+18] = r10$relbias_beta0_tau0.975
-
+  
   r10$est$beta01 <- data.frame(r10$est$beta01)
   r10$est$beta02 <- data.frame(r10$est$beta02)
   est110 <- append(est110, r10$est$beta01)
   est210 <- append(est210, r10$est$beta02)
-#  est110 <- data.frame(est110)
-#  est210 <- data.frame(est210)
+  #  est110 <- data.frame(est110)
+  #  est210 <- data.frame(est210)
   
   
- 
+  
   r11 <- lqmm_cal(B=inp$B[i+20], N=inp$N[i+20], ni=inp$ni[i+20], alpha_0=inp$alpha_0[i+20], meanx=inp$meanx[i+20], meanij=inp$meanij[i+20],
                   sd=inp$sd[i+20], sdi=inp$sdi[i+20], df=inp$df[i+20], dfi=inp$dfi[i+20], tau1=inp$tau1[i+20], tau2=inp$tau2[i+20], FUN = sim_lnorm_sc)
   MSE_beta0_0.025[i+20]  = r11$MSE_tau_0.025$beta0
@@ -264,13 +264,13 @@ for (i in 1:2) {
   B1[i+20]  = r11$B1
   relbias_beta0_tau0.025[i+20] = r11$relbias_beta0_tau0.025
   relbias_beta0_tau0.975[i+20] = r11$relbias_beta0_tau0.975
-
+  
   r11$est$beta01 <- data.frame(r11$est$beta01)
   r11$est$beta02 <- data.frame(r11$est$beta02)
   est111 <- append(est111, r11$est$beta01)
   est211 <- append(est211, r11$est$beta02)
-#  est111 <- data.frame(est111)
-#  est211 <- data.frame(est211)
+  #  est111 <- data.frame(est111)
+  #  est211 <- data.frame(est211)
   
   
   
@@ -284,13 +284,13 @@ for (i in 1:2) {
   B1[i+22]  = r12$B1
   relbias_beta0_tau0.025[i+22] = r12$relbias_beta0_tau0.025
   relbias_beta0_tau0.975[i+22] = r12$relbias_beta0_tau0.975
-
+  
   r12$est$beta01 <- data.frame(r12$est$beta01)
   r12$est$beta02 <- data.frame(r12$est$beta02)
   est112 <- append(est112, r12$est$beta01)
   est212 <- append(est212, r12$est$beta02)
-#  est112 <- data.frame(est112)
-#  est212 <- data.frame(est212)
+  #  est112 <- data.frame(est112)
+  #  est212 <- data.frame(est212)
   
   
   
@@ -304,13 +304,13 @@ for (i in 1:2) {
   B1[i+24]  = r13$B1
   relbias_beta0_tau0.025[i+24] = r13$relbias_beta0_tau0.025
   relbias_beta0_tau0.975[i+24] = r13$relbias_beta0_tau0.975
-
+  
   r13$est$beta01 <- data.frame(r13$est$beta01)
   r13$est$beta02 <- data.frame(r13$est$beta02)
   est113 <- append(est113, r13$est$beta01)
   est213 <- append(est213, r13$est$beta02)
-#  est113 <- data.frame(est113)
-#  est213 <- data.frame(est213)
+  #  est113 <- data.frame(est113)
+  #  est213 <- data.frame(est213)
   
   
   
@@ -324,13 +324,13 @@ for (i in 1:2) {
   B1[i+26]  = r14$B1
   relbias_beta0_tau0.025[i+26] = r14$relbias_beta0_tau0.025
   relbias_beta0_tau0.975[i+26] = r14$relbias_beta0_tau0.975
-
+  
   r14$est$beta01 <- data.frame(r14$est$beta01)
   r14$est$beta02 <- data.frame(r14$est$beta02)
   est114 <- append(est114, r14$est$beta01)
   est214 <- append(est214, r14$est$beta02)
-#  est114 <- data.frame(est114)
-#  est214 <- data.frame(est214)
+  #  est114 <- data.frame(est114)
+  #  est214 <- data.frame(est214)
   
   
   r15 <- lqmm_cal(B=inp$B[i+28], N=inp$N[i+28], ni=inp$ni[i+28], alpha_0=inp$alpha_0[i+28], meanx=inp$meanx[i+28], meanij=inp$meanij[i+28],
@@ -343,17 +343,17 @@ for (i in 1:2) {
   B1[i+28]  = r15$B1
   relbias_beta0_tau0.025[i+28] = r15$relbias_beta0_tau0.025
   relbias_beta0_tau0.975[i+28] = r15$relbias_beta0_tau0.975
-
+  
   r15$est$beta01 <- data.frame(r15$est$beta01)
   r15$est$beta02 <- data.frame(r15$est$beta02)
   est115 <- append(est115, r15$est$beta01)
   est215 <- append(est215, r15$est$beta02)
-#  est115 <- data.frame(est115)
-#  est215 <- data.frame(est215)
+  #  est115 <- data.frame(est115)
+  #  est215 <- data.frame(est215)
   
   
-#  est1[,i+28] = r15$est$beta01
-#  est2[,i+28] = r15$est$beta02
+  #  est1[,i+28] = r15$est$beta01
+  #  est2[,i+28] = r15$est$beta02
   
 }
 
